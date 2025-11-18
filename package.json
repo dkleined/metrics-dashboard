@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "node -r dotenv/config node_modules/node-pg-migrate/bin/node-pg-migrate up --database-url-var DATABASE_URL dotenv_config_path=.env.local && next build",
+    "build": "node -r dotenv/config node_modules/node-pg-migrate/bin/node-pg-migrate up --database-url-var POSTGRES_URL dotenv_config_path=.env.local && next build",
     "start": "next start -p 3001",
     "lint": "next lint",
-    "migrate": "node -r dotenv/config node_modules/node-pg-migrate/bin/node-pg-migrate up --database-url-var DATABASE_URL dotenv_config_path=.env.local",
-    "migrate:down": "node -r dotenv/config node_modules/node-pg-migrate/bin/node-pg-migrate down --database-url-var DATABASE_URL dotenv_config_path=.env.local",
+    "migrate": "node -r dotenv/config node_modules/node-pg-migrate/bin/node-pg-migrate up --database-url-var POSTGRES_URL dotenv_config_path=.env.local",
+    "migrate:down": "node -r dotenv/config node_modules/node-pg-migrate/bin/node-pg-migrate down --database-url-var POSTGRES_URL dotenv_config_path=.env.local",
     "migrate:create": "node-pg-migrate create"
   },
   "dependencies": {

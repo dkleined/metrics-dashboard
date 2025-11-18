@@ -35,7 +35,7 @@ In Vercel Dashboard → Settings → Environment Variables, add:
 
 ```bash
 # Database (from Vercel Postgres or Neon)
-DATABASE_URL=postgresql://user:pass@host:5432/db
+POSTGRES_URL=postgresql://user:pass@host:5432/db
 
 # Metrics API Secret (generate a strong random string)
 METRICS_SECRET=your-production-secret-key-here
