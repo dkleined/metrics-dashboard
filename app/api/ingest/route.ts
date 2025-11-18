@@ -2,6 +2,46 @@ import { NextRequest, NextResponse } from 'next/server';
 import { metricsStore, MetricEvent } from '@/lib/metrics';
 import { initDatabase } from '@/lib/db';
 
+// Common bot user agents to filter out
+const BOT_PATTERNS = [
+  /bot/i,
+  /crawler/i,
+  /spider/i,
+  /crawling/i,
+  /google/i,
+  /bing/i,
+  /yahoo/i,
+  /baidu/i,
+  /yandex/i,
+  /duckduckgo/i,
+  /slurp/i,
+  /teoma/i,
+  /ia_archiver/i,
+  /facebookexternalhit/i,
+  /twitterbot/i,
+  /linkedinbot/i,
+  /whatsapp/i,
+  /slack/i,
+  /discord/i,
+  /telegram/i,
+  /pinterest/i,
+  /semrush/i,
+  /ahrefs/i,
+  /mj12bot/i,
+  /dotbot/i,
+  /rogerbot/i,
+  /screaming frog/i,
+  /lighthouse/i,
+  /gtmetrix/i,
+  /pingdom/i,
+  /uptimerobot/i,
+];
+
+function isBot(userAgent: string | null | undefined): boolean {
+  if (!userAgent) return false;
+  return BOT_PATTERNS.some(pattern => pattern.test(userAgent));
+}
+
 export async function POST(req: NextRequest) {
     try {
         // Verify secret
@@ -15,6 +55,14 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
+        
+        // Check if request is from a bot - reject silently
+        if (isBot(body.userAgent)) {
+            return NextResponse.json({
+                success: true,
+                message: 'Event filtered (bot detected)'
+            }, { status: 200 });
+        }
         
         // Validate required fields
         if (!body.projectId || !body.eventType) {
@@ -95,6 +143,12 @@ export async function PUT(req: NextRequest) {
 
         for (const eventData of body.events) {
             try {
+                // Skip bot events in batch
+                if (isBot(eventData.userAgent)) {
+                    successCount++; // Count as success but don't ingest
+                    continue;
+                }
+                
                 if (!eventData.projectId || !eventData.eventType) {
                     errors.push({ event: eventData, error: 'Missing required fields' });
                     continue;
