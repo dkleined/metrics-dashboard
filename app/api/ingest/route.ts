@@ -42,6 +42,18 @@ function isBot(userAgent: string | null | undefined): boolean {
   return BOT_PATTERNS.some(pattern => pattern.test(userAgent));
 }
 
+// CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Handle OPTIONS preflight request
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function POST(req: NextRequest) {
     try {
         // Verify secret
@@ -51,7 +63,7 @@ export async function POST(req: NextRequest) {
         if (secret !== process.env.METRICS_SECRET) {
             return NextResponse.json({
                 error: 'Unauthorized'
-            }, { status: 401 });
+            }, { status: 401, headers: corsHeaders });
         }
 
         const body = await req.json();
@@ -61,35 +73,35 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({
                 success: true,
                 message: 'Event filtered (bot detected)'
-            }, { status: 200 });
+            }, { status: 200, headers: corsHeaders });
         }
         
         // Validate required fields
         if (!body.projectId || !body.eventType) {
             return NextResponse.json({
                 error: 'Missing required fields: projectId, eventType'
-            }, { status: 400 });
+            }, { status: 400, headers: corsHeaders });
         }
 
         // Validate event type
         if (!['page_view', 'custom_event'].includes(body.eventType)) {
             return NextResponse.json({
                 error: 'Invalid eventType. Must be page_view or custom_event'
-            }, { status: 400 });
+            }, { status: 400, headers: corsHeaders });
         }
 
         // Validate page_view has path
         if (body.eventType === 'page_view' && !body.path) {
             return NextResponse.json({
                 error: 'page_view events require a path'
-            }, { status: 400 });
+            }, { status: 400, headers: corsHeaders });
         }
 
         // Validate custom_event has eventName
         if (body.eventType === 'custom_event' && !body.eventName) {
             return NextResponse.json({
                 error: 'custom_event events require an eventName'
-            }, { status: 400 });
+            }, { status: 400, headers: corsHeaders });
         }
 
         const event: MetricEvent = {
@@ -108,13 +120,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
             success: true,
             message: 'Event ingested successfully'
-        }, { status: 200 });
+        }, { status: 200, headers: corsHeaders });
     } catch (error) {
         console.error('Ingestion error:', error);
         return NextResponse.json({
             error: 'Internal server error',
             message: error instanceof Error ? error.message : 'Unknown error'
-        }, { status: 500 });
+        }, { status: 500, headers: corsHeaders });
     }
 }
 
@@ -127,7 +139,7 @@ export async function PUT(req: NextRequest) {
         if (secret !== process.env.METRICS_SECRET) {
             return NextResponse.json({
                 error: 'Unauthorized'
-            }, { status: 401 });
+            }, { status: 401, headers: corsHeaders });
         }
 
         const body = await req.json();
@@ -135,7 +147,7 @@ export async function PUT(req: NextRequest) {
         if (!Array.isArray(body.events)) {
             return NextResponse.json({
                 error: 'Batch ingestion requires an events array'
-            }, { status: 400 });
+            }, { status: 400, headers: corsHeaders });
         }
 
         let successCount = 0;
@@ -181,12 +193,12 @@ export async function PUT(req: NextRequest) {
             successCount,
             errorCount: errors.length,
             errors: errors.length > 0 ? errors : undefined
-        }, { status: 200 });
+        }, { status: 200, headers: corsHeaders });
     } catch (error) {
         console.error('Batch ingestion error:', error);
         return NextResponse.json({
             error: 'Internal server error',
             message: error instanceof Error ? error.message : 'Unknown error'
-        }, { status: 500 });
+        }, { status: 500, headers: corsHeaders });
     }
 }
