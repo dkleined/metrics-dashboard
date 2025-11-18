@@ -1,4 +1,4 @@
-import { sql } from './db';
+import {sql} from './db';
 
 export type MetricEvent = {
     projectId: string;
@@ -9,14 +9,18 @@ export type MetricEvent = {
     properties?: Record<string, any>;
     referrer?: string;
     userAgent?: string;
+    ipAddress?: string;
+    city?: string;
+    region?: string;
+    country?: string;
 };
 
 export class MetricsStore {
     async ingestEvent(event: MetricEvent) {
         if (event.eventType === 'page_view' && event.path) {
             await sql`
-                INSERT INTO page_views (project_id, path, visitor_id, referrer, user_agent)
-                VALUES (${event.projectId}, ${event.path}, ${event.visitorId || 'anonymous'}, ${event.referrer || null}, ${event.userAgent || null})
+                INSERT INTO page_views (project_id, path, visitor_id, referrer, user_agent, ip_address, city, region, country)
+                VALUES (${event.projectId}, ${event.path}, ${event.visitorId || 'anonymous'}, ${event.referrer || null}, ${event.userAgent || null}, ${event.ipAddress || null}, ${event.city || null}, ${event.region || null}, ${event.country || null})
             `;
         } else if (event.eventType === 'custom_event' && event.eventName) {
             await sql`
@@ -68,17 +72,47 @@ export class MetricsStore {
             ORDER BY project_id, views DESC
         `;
 
+        // Top countries across all projects
+        const topCountries = await sql`
+            SELECT country, COUNT(*) as visitors
+            FROM page_views
+            WHERE created_at >= ${startDate.toISOString()}
+            AND created_at <= ${endDate.toISOString()}
+            AND country IS NOT NULL
+            AND country != 'Unknown'
+            GROUP BY country
+            ORDER BY visitors DESC
+            LIMIT 10
+        `;
+
+        // Top cities across all projects
+        const topCities = await sql`
+            SELECT city, region, country, COUNT(*) as visitors
+            FROM page_views
+            WHERE created_at >= ${startDate.toISOString()}
+            AND created_at <= ${endDate.toISOString()}
+            AND city IS NOT NULL
+            AND city != 'Unknown'
+            GROUP BY city, region, country
+            ORDER BY visitors DESC
+            LIMIT 10
+        `;
+
         // Handle both postgres and @vercel/postgres result formats
         const visitorsArray = Array.isArray(visitors) ? visitors : visitors.rows;
         const pageViewsArray = Array.isArray(pageViews) ? pageViews : pageViews.rows;
         const customEventsArray = Array.isArray(customEvents) ? customEvents : customEvents.rows;
         const topPagesArray = Array.isArray(topPages) ? topPages : topPages.rows;
+        const topCountriesArray = Array.isArray(topCountries) ? topCountries : topCountries.rows;
+        const topCitiesArray = Array.isArray(topCities) ? topCities : topCities.rows;
 
         return {
             uniqueVisitors: Number((visitorsArray[0] as any)?.count || 0),
             totalPageViews: Number((pageViewsArray[0] as any)?.count || 0),
             customEvents: (customEventsArray as any[]).map((e: any) => ({ event_name: e.event_name, count: Number(e.count) })),
-            topPages: (topPagesArray as any[]).map((p: any) => ({ project_id: p.project_id, path: p.path, views: Number(p.views) }))
+            topPages: (topPagesArray as any[]).map((p: any) => ({ project_id: p.project_id, path: p.path, views: Number(p.views) })),
+            topCountries: (topCountriesArray as any[]).map((c: any) => ({ country: c.country, visitors: Number(c.visitors) })),
+            topCities: (topCitiesArray as any[]).map((c: any) => ({ city: c.city, region: c.region, country: c.country, visitors: Number(c.visitors) }))
         };
     }
 
@@ -123,17 +157,49 @@ export class MetricsStore {
             LIMIT 10
         `;
 
+        // Top countries
+        const topCountries = await sql`
+            SELECT country, COUNT(*) as visitors
+            FROM page_views
+            WHERE project_id = ${projectId}
+            AND created_at >= ${startDate.toISOString()}
+            AND created_at <= ${endDate.toISOString()}
+            AND country IS NOT NULL
+            AND country != 'Unknown'
+            GROUP BY country
+            ORDER BY visitors DESC
+            LIMIT 10
+        `;
+
+        // Top cities
+        const topCities = await sql`
+            SELECT city, region, country, COUNT(*) as visitors
+            FROM page_views
+            WHERE project_id = ${projectId}
+            AND created_at >= ${startDate.toISOString()}
+            AND created_at <= ${endDate.toISOString()}
+            AND city IS NOT NULL
+            AND city != 'Unknown'
+            GROUP BY city, region, country
+            ORDER BY visitors DESC
+            LIMIT 10
+        `;
+
         // Handle both postgres and @vercel/postgres result formats
         const visitorsArray = Array.isArray(visitors) ? visitors : visitors.rows;
         const pageViewsArray = Array.isArray(pageViews) ? pageViews : pageViews.rows;
         const customEventsArray = Array.isArray(customEvents) ? customEvents : customEvents.rows;
         const topPagesArray = Array.isArray(topPages) ? topPages : topPages.rows;
+        const topCountriesArray = Array.isArray(topCountries) ? topCountries : topCountries.rows;
+        const topCitiesArray = Array.isArray(topCities) ? topCities : topCities.rows;
 
         return {
             uniqueVisitors: Number((visitorsArray[0] as any)?.count || 0),
             totalPageViews: Number((pageViewsArray[0] as any)?.count || 0),
             customEvents: (customEventsArray as any[]).map((e: any) => ({ event_name: e.event_name, count: Number(e.count) })),
-            topPages: (topPagesArray as any[]).map((p: any) => ({ path: p.path, views: Number(p.views) }))
+            topPages: (topPagesArray as any[]).map((p: any) => ({ path: p.path, views: Number(p.views) })),
+            topCountries: (topCountriesArray as any[]).map((c: any) => ({ country: c.country, visitors: Number(c.visitors) })),
+            topCities: (topCitiesArray as any[]).map((c: any) => ({ city: c.city, region: c.region, country: c.country, visitors: Number(c.visitors) }))
         };
     }
 
@@ -145,14 +211,12 @@ export class MetricsStore {
         // Handle both postgres and @vercel/postgres result formats
         const projectsArray = Array.isArray(projects) ? projects : projects.rows;
 
-        const stats = await Promise.all(
+        return await Promise.all(
             (projectsArray as any[]).map(async (p: any) => ({
                 projectId: p.project_id,
                 ...(await this.getProjectStats(p.project_id, startDate, endDate))
             }))
         );
-
-        return stats;
     }
 
     async getTimeSeriesData(projectId: string | null, days: number = 7) {

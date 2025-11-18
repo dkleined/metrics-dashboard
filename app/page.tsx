@@ -1,6 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import LocationSection from '@/components/LocationSection';
+import StatCard from '@/components/StatCard';
+import ProgressBar from '@/components/ProgressBar';
 
 type ProjectStats = {
     projectId: string;
@@ -16,6 +19,8 @@ type DashboardData = {
         totalPageViews: number;
         customEvents: Array<{ event_name: string; count: number }>;
         topPages: Array<{ path: string; views: number }>;
+        topCountries?: Array<{ country: string; visitors: number }>;
+        topCities?: Array<{ city: string; region: string; country: string; visitors: number }>;
     };
     timeSeries: Array<{
         date: string;
@@ -136,32 +141,30 @@ export default function Dashboard() {
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 rounded-2xl p-6 border border-blue-500/30">
-                        <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-gray-400 text-sm font-bold uppercase">Unique Visitors</h3>
-                            <span className="text-3xl">👥</span>
-                        </div>
-                        <p className="text-4xl font-black text-white">{data.today.uniqueVisitors}</p>
-                        <p className="text-gray-400 text-sm mt-1">Today</p>
-                    </div>
-
-                    <div className="bg-gradient-to-br from-green-600/20 to-green-800/20 rounded-2xl p-6 border border-green-500/30">
-                        <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-gray-400 text-sm font-bold uppercase">Page Views</h3>
-                            <span className="text-3xl">📄</span>
-                        </div>
-                        <p className="text-4xl font-black text-white">{data.today.totalPageViews}</p>
-                        <p className="text-gray-400 text-sm mt-1">Today</p>
-                    </div>
-
-                    <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 rounded-2xl p-6 border border-purple-500/30">
-                        <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-gray-400 text-sm font-bold uppercase">Custom Events</h3>
-                            <span className="text-3xl">⚡</span>
-                        </div>
-                        <p className="text-4xl font-black text-white">{totalEvents}</p>
-                        <p className="text-gray-400 text-sm mt-1">Today</p>
-                    </div>
+                    <StatCard
+                        title="Unique Visitors"
+                        value={data.today.uniqueVisitors}
+                        emoji="👥"
+                        colorFrom="from-blue-600/20"
+                        colorTo="to-blue-800/20"
+                        borderColor="border-blue-500/30"
+                    />
+                    <StatCard
+                        title="Page Views"
+                        value={data.today.totalPageViews}
+                        emoji="📄"
+                        colorFrom="from-green-600/20"
+                        colorTo="to-green-800/20"
+                        borderColor="border-green-500/30"
+                    />
+                    <StatCard
+                        title="Custom Events"
+                        value={totalEvents}
+                        emoji="⚡"
+                        colorFrom="from-purple-600/20"
+                        colorTo="to-purple-800/20"
+                        borderColor="border-purple-500/30"
+                    />
                 </div>
 
                 {/* Projects Overview - Always Visible */}
@@ -201,6 +204,8 @@ export default function Dashboard() {
                 <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700 mb-8">
                     <h2 className="text-2xl font-black text-white mb-4">📈 Trends</h2>
                     
+                    {data.timeSeries && data.timeSeries.length > 0 ? (
+                    <>
                     {/* Desktop: Chart */}
                     <div className="hidden md:block">
                         <ResponsiveContainer width="100%" height={300}>
@@ -251,7 +256,31 @@ export default function Dashboard() {
                             </div>
                         ))}
                     </div>
+                    </>
+                    ) : (
+                        <p className="text-gray-400 text-center py-12">No trend data available</p>
+                    )}
                 </div>
+
+                {/* Top Countries */}
+                <LocationSection
+                    title="Top Countries"
+                    emoji="🌍"
+                    data={data.today.topCountries || []}
+                    colorFrom="from-green-500"
+                    colorTo="to-green-600"
+                    emptyMessage="No country data yet - visit the site to generate location data!"
+                />
+
+                {/* Top Cities */}
+                <LocationSection
+                    title="Top Cities"
+                    emoji="🏙️"
+                    data={data.today.topCities || []}
+                    colorFrom="from-purple-500"
+                    colorTo="to-purple-600"
+                    emptyMessage="No city data yet - visit the site to generate location data!"
+                />
 
                 {/* Top Pages - Always Visible */}
                 <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
@@ -264,18 +293,14 @@ export default function Dashboard() {
                                     const maxViews = data.today.topPages[0]?.views || 1;
                                     const percentage = (page.views / maxViews) * 100;
                                     return (
-                                        <div key={`${page.path}-${index}`} className="space-y-1">
-                                            <div className="flex items-center justify-between text-sm">
-                                                <span className="text-gray-300 font-medium truncate flex-1">{page.path}</span>
-                                                <span className="text-blue-400 font-bold ml-2">{page.views} views</span>
-                                            </div>
-                                            <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
-                                                <div 
-                                                    className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500"
-                                                    style={{ width: `${percentage}%` }}
-                                                />
-                                            </div>
-                                        </div>
+                                        <ProgressBar
+                                            key={`${page.path}-${index}`}
+                                            label={page.path}
+                                            value={`${page.views} views`}
+                                            percentage={percentage}
+                                            colorFrom="from-blue-500"
+                                            colorTo="to-blue-600"
+                                        />
                                     );
                                 })}
                             </div>

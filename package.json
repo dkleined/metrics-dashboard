@@ -4,14 +4,17 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "next build",
+    "build": "node -r dotenv/config node_modules/node-pg-migrate/bin/node-pg-migrate up --database-url-var DATABASE_URL dotenv_config_path=.env.local && next build",
     "start": "next start -p 3001",
-    "lint": "next lint"
+    "lint": "next lint",
+    "migrate": "node -r dotenv/config node_modules/node-pg-migrate/bin/node-pg-migrate up --database-url-var DATABASE_URL dotenv_config_path=.env.local",
+    "migrate:down": "node -r dotenv/config node_modules/node-pg-migrate/bin/node-pg-migrate down --database-url-var DATABASE_URL dotenv_config_path=.env.local",
+    "migrate:create": "node-pg-migrate create"
   },
   "dependencies": {
     "@vercel/postgres": "^0.10.0",
-    "postgres": "^3.4.4",
     "next": "^15.3.3",
+    "postgres": "^3.4.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^3.4.1"
@@ -20,10 +23,15 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "^15.3.3",
+    "node-pg-migrate": "^8.0.3",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
+  },
+  "overrides": {
+    "glob": "^11.0.4"
   }
 }

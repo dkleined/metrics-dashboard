@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { metricsStore, MetricEvent } from '@/lib/metrics';
 import { initDatabase } from '@/lib/db';
+import { getClientIP, getLocationFromIP } from '@/lib/ipGeolocation';
 
 // Common bot user agents to filter out
 const BOT_PATTERNS = [
@@ -104,6 +105,10 @@ export async function POST(req: NextRequest) {
             }, { status: 400, headers: corsHeaders });
         }
 
+        // Get IP and location
+        const ip = getClientIP(req);
+        const location = await getLocationFromIP(ip);
+
         const event: MetricEvent = {
             projectId: body.projectId,
             eventType: body.eventType,
@@ -112,7 +117,11 @@ export async function POST(req: NextRequest) {
             eventName: body.eventName,
             properties: body.properties,
             referrer: body.referrer,
-            userAgent: body.userAgent
+            userAgent: body.userAgent,
+            ipAddress: location.ip,
+            city: location.city,
+            region: location.region,
+            country: location.country
         };
 
         await metricsStore.ingestEvent(event);
