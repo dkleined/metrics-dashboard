@@ -74,7 +74,7 @@ export class MetricsStore {
 
         // Top countries across all projects
         const topCountries = await sql`
-            SELECT country, COUNT(*) as visitors
+            SELECT country, COUNT(DISTINCT visitor_id) as visitors
             FROM page_views
             WHERE created_at >= ${startDate.toISOString()}
             AND created_at <= ${endDate.toISOString()}
@@ -87,7 +87,7 @@ export class MetricsStore {
 
         // Top cities across all projects
         const topCities = await sql`
-            SELECT city, region, country, COUNT(*) as visitors
+            SELECT city, region, country, COUNT(DISTINCT visitor_id) as visitors
             FROM page_views
             WHERE created_at >= ${startDate.toISOString()}
             AND created_at <= ${endDate.toISOString()}
@@ -159,7 +159,7 @@ export class MetricsStore {
 
         // Top countries
         const topCountries = await sql`
-            SELECT country, COUNT(*) as visitors
+            SELECT country, COUNT(DISTINCT visitor_id) as visitors
             FROM page_views
             WHERE project_id = ${projectId}
             AND created_at >= ${startDate.toISOString()}
@@ -173,7 +173,7 @@ export class MetricsStore {
 
         // Top cities
         const topCities = await sql`
-            SELECT city, region, country, COUNT(*) as visitors
+            SELECT city, region, country, COUNT(DISTINCT visitor_id) as visitors
             FROM page_views
             WHERE project_id = ${projectId}
             AND created_at >= ${startDate.toISOString()}
