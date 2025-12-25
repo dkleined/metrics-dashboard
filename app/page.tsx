@@ -98,7 +98,7 @@ export default function Dashboard() {
         );
     }
 
-    const totalEvents = data.today.customEvents.reduce((sum, e) => sum + e.count, 0);
+    const totalEvents = data.today?.customEvents?.reduce((sum, e) => sum + e.count, 0) || 0;
 
     return (
         <main className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-4 md:p-8">

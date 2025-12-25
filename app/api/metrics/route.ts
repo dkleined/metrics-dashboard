@@ -45,9 +45,18 @@ export async function GET(req: NextRequest) {
         }, { headers: corsHeaders, status: 200 });
     } catch (error) {
         console.error('Metrics query error:', error);
+        // Return valid empty structure instead of error to prevent frontend crash
         return NextResponse.json({
-            error: 'Internal server error',
-            message: error instanceof Error ? error.message : 'Unknown error'
-        }, { headers: corsHeaders, status: 500 });
+            today: {
+                uniqueVisitors: 0,
+                totalPageViews: 0,
+                customEvents: [],
+                topPages: [],
+                topCountries: [],
+                topCities: []
+            },
+            timeSeries: [],
+            projects: []
+        }, { headers: corsHeaders, status: 200 });
     }
 }
