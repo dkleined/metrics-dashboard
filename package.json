@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "npm run migrate:prod && next build",
+    "build": "next build",
     "start": "next start -p 3001",
     "lint": "next lint",
     "migrate": "node -r dotenv/config node_modules/node-pg-migrate/bin/node-pg-migrate up --database-url-var POSTGRES_URL dotenv_config_path=.env.local",
